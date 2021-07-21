@@ -25,7 +25,29 @@ not be misrepresented as being the original software.
 ]]
 
 local ffi = require("ffi")
-local curl = ffi.load("libcurl")
+
+local function load_libcurl()
+	local name = "libcurl"
+	local names = { name }
+
+	if jit.os == "Linux" then
+		names = { name, name .. ".so.4", name .. ".so.3" }
+	elseif jit.os == "OSX" then
+		names = { name, name .. ".4.dylib", name .. ".so.4", name .. ".3.dylib", name .. ".so.3" }
+	end
+
+	for _, candidate in ipairs(names) do
+		local success, libcurl = pcall(ffi.load, candidate)
+
+		if success and libcurl then
+			return libcurl
+		end
+	end
+
+	error("libcurl not found! Attempted files: " .. table.concat(names, ", "))
+end
+
+local curl = load_libcurl()
 
 if (jit.os == "Windows") then
 	--Windows!
